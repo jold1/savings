@@ -1,0 +1,79 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Saved">
+<title>Saved</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<style>
+body{font-family:-apple-system,system-ui,sans-serif;margin:0;background:#0f172a;color:#f1f5f9;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+.w{max-width:480px;margin:auto;padding:16px}
+.big{font-size:44px;font-weight:800;color:#4ade80;text-align:center;margin:8px 0}
+.row{display:flex;gap:8px;margin:6px 0}.row>*{flex:1}
+.card{background:#1e293b;border-radius:14px;padding:12px;margin:10px 0}
+.k{display:flex;justify-content:space-between;text-align:center}.k div{flex:1}.k b{display:block;font-size:20px;color:#4ade80}
+input,select,button{font-size:17px;padding:12px;border-radius:10px;border:0;width:100%;box-sizing:border-box;margin-top:6px}
+button{background:#22c55e;color:#04210f;font-weight:700}
+.tab{background:#334155;color:#fff}.on{background:#22c55e;color:#04210f}
+li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #334155}
+ul{list-style:none;padding:0;margin:0}small{color:#94a3b8}
+.bar{height:22px;background:#4ade80;border-radius:4px;margin:2px 0}
+</style></head><body><div class="w">
+<div class="big" id="tot">CHF 0.00</div><div style="text-align:center"><small>saved this month</small></div>
+<div class="card k"><div>Today<b id="sDay">0</b></div><div>Week<b id="sWeek">0</b></div><div>Month<b id="sMonth">0</b></div><div>All<b id="sAll">0</b></div></div>
+<div class="card">
+<div class="row"><button class="tab on" id="t1" onclick="setMode(1)">Amount</button><button class="tab" id="t2" onclick="setMode(2)">Was → Now</button></div>
+<input id="note" placeholder="What did you skip/change?">
+<div class="row" id="m1"><input id="amt" type="number" step="0.05" inputmode="decimal" placeholder="Saved"></div>
+<div class="row" id="m2" style="display:none"><input id="wasIn" type="number" inputmode="decimal" placeholder="Was"><input id="nowIn" type="number" inputmode="decimal" placeholder="Now"></div>
+<div class="row"><select id="cur"><option>CHF</option><option>EUR</option></select><button onclick="addEntry()">+ Save it</button></div>
+</div>
+<div class="card"><small>Last 7 days</small><div id="chart"></div></div>
+<div class="card"><small>Entries (tap one to delete)</small><ul id="list"></ul></div>
+<div class="card"><small>Settings (once per device)</small>
+<input id="cfgUrl" placeholder="Supabase Project URL">
+<input id="cfgKey" placeholder="Supabase anon / publishable key">
+<div class="row"><input id="cfgFx" type="number" step="0.01" inputmode="decimal" placeholder="EUR→CHF rate"><button onclick="saveCfg()">Save</button></div>
+<small id="status"></small></div>
+</div><script>
+let mode=1,sb=null,rows=[];
+const $=id=>document.getElementById(id);
+const get=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
+const put=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+const f=n=>Number(n).toLocaleString('de-CH',{minimumFractionDigits:2,maximumFractionDigits:2});
+function setMode(n){mode=n;$('m1').style.display=n==1?'flex':'none';$('m2').style.display=n==2?'flex':'none';$('t1').className='tab'+(n==1?' on':'');$('t2').className='tab'+(n==2?' on':'')}
+function fx(){return parseFloat(get('fx')||'0.94')}
+function saveCfg(){put('url',$('cfgUrl').value.trim());put('key',$('cfgKey').value.trim());if($('cfgFx').value)put('fx',$('cfgFx').value);init()}
+async function init(){
+ $('cfgUrl').value=get('url')||'';$('cfgKey').value=get('key')||'';$('cfgFx').value=get('fx')||'0.94';
+ if(get('url')&&get('key')){
+  try{sb=supabase.createClient(get('url'),get('key'));
+   const{data,error}=await sb.from('savings').select('*').order('created_at',{ascending:false});
+   if(error){$('status').textContent='Not connected: '+error.message}else{rows=data;$('status').textContent='Connected ✓ (saved online)'}
+  }catch(e){$('status').textContent='Not connected: '+e.message}
+ }else{rows=JSON.parse(get('rows')||'[]');$('status').textContent='Not connected yet: entries only on this phone'}
+ draw()}
+async function addEntry(){
+ const was=parseFloat($('wasIn').value),now=parseFloat($('nowIn').value);
+ const s=mode==1?parseFloat($('amt').value):was-now;
+ if(!(s>0))return alert('Enter a positive saving');
+ const c=$('cur').value;
+ const r={created_at:new Date().toISOString(),amount:+s.toFixed(2),currency:c,amount_chf:c=='EUR'?+(s*fx()).toFixed(2):+s.toFixed(2),note:$('note').value||'',was_price:mode==2?was:null,now_price:mode==2?now:null};
+ if(sb){const{data,error}=await sb.from('savings').insert(r).select();if(error)return alert(error.message);rows.unshift(data[0])}
+ else{r.id=Date.now();rows.unshift(r);put('rows',JSON.stringify(rows))}
+ $('amt').value=$('wasIn').value=$('nowIn').value=$('note').value='';draw()}
+async function del(id){if(!confirm('Delete this entry?'))return;
+ if(sb){const{error}=await sb.from('savings').delete().eq('id',id);if(error)return alert(error.message)}
+ rows=rows.filter(r=>String(r.id)!==String(id));if(!sb)put('rows',JSON.stringify(rows));draw()}
+function draw(){
+ const n=new Date(),day=new Date(n.getFullYear(),n.getMonth(),n.getDate());
+ const wk=new Date(day);wk.setDate(day.getDate()-((day.getDay()+6)%7));
+ const mo=new Date(n.getFullYear(),n.getMonth(),1);
+ const sum=from=>rows.filter(r=>new Date(r.created_at)>=from).reduce((t,r)=>t+ +r.amount_chf,0);
+ $('sDay').textContent=f(sum(day));$('sWeek').textContent=f(sum(wk));$('sMonth').textContent=f(sum(mo));$('sAll').textContent=f(sum(new Date(0)));$('tot').textContent='CHF '+f(sum(mo));
+ const days=[];for(let i=6;i>=0;i--){const s=new Date(day);s.setDate(day.getDate()-i);const e=new Date(s);e.setDate(s.getDate()+1);
+  days.push([s,rows.filter(r=>{const t=new Date(r.created_at);return t>=s&&t<e}).reduce((t,r)=>t+ +r.amount_chf,0)])}
+ const mx=Math.max(1,...days.map(x=>x[1]));
+ $('chart').innerHTML=days.map(([s,v])=>`<div style="display:flex;align-items:center;gap:6px"><small style="width:34px">${s.toLocaleDateString('en',{weekday:'short'})}</small><div class="bar" style="width:${v/mx*70}%"></div><small>${f(v)}</small></div>`).join('');
+ $('list').innerHTML=rows.slice(0,50).map(r=>`<li onclick="del('${r.id}')"><span>${(r.note||'—').replace(/</g,'&lt;')}<br><small>${new Date(r.created_at).toLocaleString('de-CH')}${r.was_price?` · ${r.was_price} → ${r.now_price}`:''}</small></span><b>${r.currency} ${f(r.amount)}</b></li>`).join('')}
+init();
+</script></body></html>
