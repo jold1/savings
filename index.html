@@ -19,6 +19,12 @@ input,select,button{font-size:17px;padding:12px;border-radius:10px;border:0;widt
 .k{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;font-size:14px;color:#cbd5e1}
 .k b{display:block;font-size:18px;color:var(--acc);margin-top:2px}
 .all{text-align:center;color:var(--mute);font-size:13px;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:15px}
+th{color:var(--mute);font-weight:500;font-size:13px;text-align:right;padding:6px 4px}
+th:first-child,td:first-child{text-align:left}
+td{text-align:right;padding:9px 4px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+td:first-child{color:#cbd5e1}
+.cs{color:var(--saved)}.co{color:var(--sold)}.ct{color:var(--total);font-weight:700}
 .row{display:flex;gap:8px}.row>*{flex:1}
 .tab{background:var(--line);color:#fff;font-weight:700}
 .tab.on.s{background:var(--saved);color:#04210f}.tab.on.o{background:var(--sold);color:#2a1d00}
@@ -43,11 +49,13 @@ summary{color:var(--mute);font-size:14px}
 <div class="sub" id="lbl"></div>
 <div class="split" id="split"></div>
 
-<div class="card"><div class="k"><div>Today<b id="sDay">0</b></div><div>Week<b id="sWeek">0</b></div><div>Month<b id="sMonth">0</b></div><div>Year<b id="sYear">0</b></div></div>
+<div class="card" id="statsCard"><div class="k"><div>Today<b id="sDay">0</b></div><div>Week<b id="sWeek">0</b></div><div>Month<b id="sMonth">0</b></div><div>Year<b id="sYear">0</b></div></div>
 <div class="all" id="sAll"></div></div>
 
-<div class="card">
-<div class="row"><button class="tab on s" id="kSaved" onclick="setKind('saved')">I saved</button><button class="tab" id="kSold" onclick="setKind('sold')">I sold</button></div>
+<div class="card" id="totalCard"><table><thead><tr><th></th><th class="cs">Saved</th><th class="co">Sold</th><th class="ct">Total</th></tr></thead><tbody id="tBody"></tbody></table></div>
+
+<div class="card" id="entryCard">
+<small id="entryTitle"></small>
 <input id="note" placeholder="What did you skip/change?">
 <div id="savedBox">
  <div class="row"><button class="mini on" id="t1" onclick="setMode(1)">Amount</button><button class="mini" id="t2" onclick="setMode(2)">Was → Now</button></div>
@@ -86,11 +94,11 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const K=r=>r.kind||'saved',V=r=>+r.amount_chf||0;
 const LBL={total:'extra money this month (saved + sold)',saved:'saved this month by not spending',sold:'earned this month by selling'};
 function fx(){return parseFloat(get('fx')||'0.94')}
-function setView(v){view=v;put('view',v);draw()}
+function setView(v){view=v;put('view',v);if(v!='total')setKind(v);draw()}
 function setSpan(s){span=s;put('span',s);draw()}
 function setMode(n){mode=n;$('m1').style.display=n==1?'block':'none';$('m2').style.display=n==2?'flex':'none';$('t1').className='mini'+(n==1?' on':'');$('t2').className='mini'+(n==2?' on':'')}
 function setKind(k){kind=k;$('savedBox').style.display=k=='saved'?'block':'none';$('soldBox').style.display=k=='sold'?'block':'none';
- $('kSaved').className='tab'+(k=='saved'?' on s':'');$('kSold').className='tab'+(k=='sold'?' on o':'');
+ $('entryTitle').textContent=k=='saved'?'Log money saved':'Log a sale';$('goBtn').textContent=k=='saved'?'+ Add saving':'+ Add sale';
  $('goBtn').className='go'+(k=='sold'?' sold':'');$('note').placeholder=k=='saved'?'What did you skip/change?':'What did you sell?'}
 function saveCfg(){put('url',$('cfgUrl').value.trim());put('key',$('cfgKey').value.trim());if($('cfgFx').value)put('fx',$('cfgFx').value);init()}
 async function init(){
@@ -114,7 +122,7 @@ async function addEntry(){
   rows.unshift(data[0])}
  else{r.id=Date.now();rows.unshift(r);put('rows',JSON.stringify(rows))}
  ['amt','wasIn','nowIn','soldAmt','note'].forEach(i=>$(i).value='');
- if(view!='total'&&view!=kind)setView(kind);else draw()}
+ draw()}
 async function del(id){if(!confirm('Delete this entry?'))return;
  if(sb){const{error}=await sb.from('savings').delete().eq('id',id);if(error)return alert(error.message)}
  rows=rows.filter(r=>String(r.id)!==String(id));if(!sb)put('rows',JSON.stringify(rows));draw()}
@@ -132,6 +140,8 @@ function draw(){
  $('split').innerHTML=view=='total'?`<span style="color:var(--saved)">Saved ${f(sum(sv,mo))}</span> &nbsp;+&nbsp; <span style="color:var(--sold)">Sold ${f(sum(so,mo))}</span>`:'';
  $('sDay').textContent=f(sum(list,day));$('sWeek').textContent=f(sum(list,wk));$('sMonth').textContent=f(sum(list,mo));$('sYear').textContent=f(sum(list,yr));
  $('sAll').textContent='All time: CHF '+f(sum(list,new Date(0)));
+ const T=view=='total';$('entryCard').style.display=T?'none':'block';$('statsCard').style.display=T?'none':'block';$('totalCard').style.display=T?'block':'none';
+ $('tBody').innerHTML=[['Today',day],['Week',wk],['Month',mo],['Year',yr],['All time',new Date(0)]].map(([l,d])=>{const a=sum(sv,d),b=sum(so,d);return `<tr><td>${l}</td><td class="cs">${f(a)}</td><td class="co">${f(b)}</td><td class="ct">${f(a+b)}</td></tr>`}).join('');
  const B=[];
  if(span=='days'){for(let i=6;i>=0;i--){const s=new Date(day);s.setDate(day.getDate()-i);const e=new Date(s);e.setDate(s.getDate()+1);B.push([s.toLocaleDateString('en',{weekday:'short'}),s,e])}}
  else{for(let i=11;i>=0;i--){B.push([new Date(n.getFullYear(),n.getMonth()-i,1).toLocaleDateString('en',{month:'short'}),new Date(n.getFullYear(),n.getMonth()-i,1),new Date(n.getFullYear(),n.getMonth()-i+1,1)])}}
@@ -142,5 +152,5 @@ function draw(){
  $('legend').style.display=view=='total'?'flex':'none';
  $('list').innerHTML=list.slice(0,50).map(r=>{const k=K(r),x=k=='sold'?(r.platform?' · '+esc(r.platform):''):(r.was_price?` · ${r.was_price} → ${r.now_price}`:'');
   return `<li onclick="del('${r.id}')"><span><i class="dot" style="background:var(--${k})"></i>${esc(r.note||'—')}<br><small>${new Date(r.created_at).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'})}${x}</small></span><b style="color:var(--${k});white-space:nowrap">${r.currency} ${f(r.amount)}</b></li>`}).join('')||'<small>No entries yet</small>'}
-init();
+if(view!='total')setKind(view);init();
 </script></body></html>
