@@ -5,75 +5,142 @@
 <title>Saved</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <style>
-body{font-family:-apple-system,system-ui,sans-serif;margin:0;background:#0f172a;color:#f1f5f9;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
+:root{--bg:#0f172a;--card:#1e293b;--line:#334155;--mute:#94a3b8;--saved:#4ade80;--sold:#fbbf24;--total:#a78bfa;--acc:#a78bfa}
+body{font-family:-apple-system,system-ui,sans-serif;margin:0;background:var(--bg);color:#f1f5f9;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}
 .w{max-width:480px;margin:auto;padding:16px}
-.big{font-size:44px;font-weight:800;color:#4ade80;text-align:center;margin:8px 0}
-.row{display:flex;gap:8px;margin:6px 0}.row>*{flex:1}
-.card{background:#1e293b;border-radius:14px;padding:12px;margin:10px 0}
-.k{display:flex;justify-content:space-between;text-align:center}.k div{flex:1}.k b{display:block;font-size:20px;color:#4ade80}
-input,select,button{font-size:17px;padding:12px;border-radius:10px;border:0;width:100%;box-sizing:border-box;margin-top:6px}
-button{background:#22c55e;color:#04210f;font-weight:700}
-.tab{background:#334155;color:#fff}.on{background:#22c55e;color:#04210f}
-li{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid #334155}
-ul{list-style:none;padding:0;margin:0}small{color:#94a3b8}
-.bar{height:22px;background:#4ade80;border-radius:4px;margin:2px 0}
+input,select,button{font-size:17px;padding:12px;border-radius:10px;border:0;width:100%;box-sizing:border-box;margin-top:6px;font-family:inherit}
+.seg{display:flex;background:var(--card);border-radius:12px;padding:4px;gap:4px}
+.seg button{margin:0;background:transparent;color:#cbd5e1;font-weight:600;padding:10px}
+.seg button.on{background:var(--line);color:#fff}
+.big{font-size:44px;font-weight:800;color:var(--acc);text-align:center;margin:14px 0 2px}
+.sub{text-align:center;color:var(--mute);font-size:14px}
+.split{text-align:center;font-size:14px;margin-top:4px;font-weight:600}
+.card{background:var(--card);border-radius:14px;padding:12px;margin:10px 0}
+.k{display:grid;grid-template-columns:repeat(4,1fr);text-align:center;font-size:14px;color:#cbd5e1}
+.k b{display:block;font-size:18px;color:var(--acc);margin-top:2px}
+.all{text-align:center;color:var(--mute);font-size:13px;margin-top:8px}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.tab{background:var(--line);color:#fff;font-weight:700}
+.tab.on.s{background:var(--saved);color:#04210f}.tab.on.o{background:var(--sold);color:#2a1d00}
+.mini{background:transparent;border:1px solid var(--line);color:#cbd5e1;padding:8px;font-size:15px}
+.mini.on{background:var(--line);color:#fff}
+.go{background:var(--saved);color:#04210f;font-weight:700}.go.sold{background:var(--sold);color:#2a1d00}
+.head{display:flex;justify-content:space-between;align-items:center}
+.head .seg{padding:2px}.head .seg button{font-size:13px;padding:6px 10px}
+.r{display:flex;align-items:center;gap:6px;margin:4px 0}
+.lb{width:34px;color:var(--mute);font-size:13px}.val{width:70px;text-align:right;color:var(--mute);font-size:13px}
+.track{flex:1;display:flex;height:20px;border-radius:4px;overflow:hidden}
+.bs{background:var(--saved)}.bo{background:var(--sold)}
+.legend{gap:14px;font-size:13px;color:var(--mute);margin-top:6px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+li{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid var(--line)}
+ul{list-style:none;padding:0;margin:0}small{color:var(--mute)}
+summary{color:var(--mute);font-size:14px}
 </style></head><body><div class="w">
-<div class="big" id="tot">CHF 0.00</div><div style="text-align:center"><small>saved this month</small></div>
-<div class="card k"><div>Today<b id="sDay">0</b></div><div>Week<b id="sWeek">0</b></div><div>Month<b id="sMonth">0</b></div><div>All<b id="sAll">0</b></div></div>
+
+<div class="seg"><button id="v_total" onclick="setView('total')">Total</button><button id="v_saved" onclick="setView('saved')">Saved</button><button id="v_sold" onclick="setView('sold')">Sold</button></div>
+<div class="big" id="tot">CHF 0.00</div>
+<div class="sub" id="lbl"></div>
+<div class="split" id="split"></div>
+
+<div class="card"><div class="k"><div>Today<b id="sDay">0</b></div><div>Week<b id="sWeek">0</b></div><div>Month<b id="sMonth">0</b></div><div>Year<b id="sYear">0</b></div></div>
+<div class="all" id="sAll"></div></div>
+
 <div class="card">
-<div class="row"><button class="tab on" id="t1" onclick="setMode(1)">Amount</button><button class="tab" id="t2" onclick="setMode(2)">Was → Now</button></div>
+<div class="row"><button class="tab on s" id="kSaved" onclick="setKind('saved')">I saved</button><button class="tab" id="kSold" onclick="setKind('sold')">I sold</button></div>
 <input id="note" placeholder="What did you skip/change?">
-<div class="row" id="m1"><input id="amt" type="number" step="0.05" inputmode="decimal" placeholder="Saved"></div>
-<div class="row" id="m2" style="display:none"><input id="wasIn" type="number" inputmode="decimal" placeholder="Was"><input id="nowIn" type="number" inputmode="decimal" placeholder="Now"></div>
-<div class="row"><select id="cur"><option>CHF</option><option>EUR</option></select><button onclick="addEntry()">+ Save it</button></div>
+<div id="savedBox">
+ <div class="row"><button class="mini on" id="t1" onclick="setMode(1)">Amount</button><button class="mini" id="t2" onclick="setMode(2)">Was → Now</button></div>
+ <div id="m1"><input id="amt" type="number" step="0.05" inputmode="decimal" placeholder="Amount saved"></div>
+ <div class="row" id="m2" style="display:none"><input id="wasIn" type="number" inputmode="decimal" placeholder="Was"><input id="nowIn" type="number" inputmode="decimal" placeholder="Now"></div>
 </div>
-<div class="card"><small>Last 7 days</small><div id="chart"></div></div>
-<div class="card"><small>Entries (tap one to delete)</small><ul id="list"></ul></div>
-<div class="card"><small>Settings (once per device)</small>
+<div id="soldBox" style="display:none">
+ <input id="soldAmt" type="number" step="0.05" inputmode="decimal" placeholder="Amount received (after fees)">
+ <select id="platform"><option>Ricardo</option><option>Facebook Marketplace</option><option>Facebook group</option><option>Tutti</option><option>Other</option></select>
+</div>
+<div class="row"><select id="cur"><option>CHF</option><option>EUR</option></select><button id="goBtn" class="go" onclick="addEntry()">+ Add</button></div>
+</div>
+
+<div class="card">
+<div class="head"><small id="chartTitle">Last 7 days</small><div class="seg"><button id="sp_days" onclick="setSpan('days')">7 days</button><button id="sp_months" onclick="setSpan('months')">12 months</button></div></div>
+<div id="chart"></div>
+<div class="legend" id="legend" style="display:flex"><span><i class="dot" style="background:var(--saved)"></i>Saved</span><span><i class="dot" style="background:var(--sold)"></i>Sold</span></div>
+</div>
+
+<div class="card"><small id="listTitle">Entries (tap one to delete)</small><ul id="list"></ul></div>
+
+<details class="card"><summary>Settings (once per device)</summary>
 <input id="cfgUrl" placeholder="Supabase Project URL">
-<input id="cfgKey" placeholder="Supabase anon / publishable key">
-<div class="row"><input id="cfgFx" type="number" step="0.01" inputmode="decimal" placeholder="EUR→CHF rate"><button onclick="saveCfg()">Save</button></div>
-<small id="status"></small></div>
+<input id="cfgKey" placeholder="Supabase publishable key">
+<div class="row"><input id="cfgFx" type="number" step="0.01" inputmode="decimal" placeholder="EUR→CHF rate"><button class="go" onclick="saveCfg()">Save</button></div>
+</details>
+<div class="sub" id="status"></div>
 </div><script>
-let mode=1,sb=null,rows=[];
+let sb=null,rows=[],kind='saved',mode=1;
 const $=id=>document.getElementById(id);
 const get=k=>{try{return localStorage.getItem(k)}catch(e){return null}};
 const put=(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}};
+let view=get('view')||'total',span=get('span')||'days';
 const f=n=>Number(n).toLocaleString('de-CH',{minimumFractionDigits:2,maximumFractionDigits:2});
-function setMode(n){mode=n;$('m1').style.display=n==1?'flex':'none';$('m2').style.display=n==2?'flex':'none';$('t1').className='tab'+(n==1?' on':'');$('t2').className='tab'+(n==2?' on':'')}
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const K=r=>r.kind||'saved',V=r=>+r.amount_chf||0;
+const LBL={total:'extra money this month (saved + sold)',saved:'saved this month by not spending',sold:'earned this month by selling'};
 function fx(){return parseFloat(get('fx')||'0.94')}
+function setView(v){view=v;put('view',v);draw()}
+function setSpan(s){span=s;put('span',s);draw()}
+function setMode(n){mode=n;$('m1').style.display=n==1?'block':'none';$('m2').style.display=n==2?'flex':'none';$('t1').className='mini'+(n==1?' on':'');$('t2').className='mini'+(n==2?' on':'')}
+function setKind(k){kind=k;$('savedBox').style.display=k=='saved'?'block':'none';$('soldBox').style.display=k=='sold'?'block':'none';
+ $('kSaved').className='tab'+(k=='saved'?' on s':'');$('kSold').className='tab'+(k=='sold'?' on o':'');
+ $('goBtn').className='go'+(k=='sold'?' sold':'');$('note').placeholder=k=='saved'?'What did you skip/change?':'What did you sell?'}
 function saveCfg(){put('url',$('cfgUrl').value.trim());put('key',$('cfgKey').value.trim());if($('cfgFx').value)put('fx',$('cfgFx').value);init()}
 async function init(){
  $('cfgUrl').value=get('url')||'';$('cfgKey').value=get('key')||'';$('cfgFx').value=get('fx')||'0.94';
  if(get('url')&&get('key')){
   try{sb=supabase.createClient(get('url'),get('key'));
    const{data,error}=await sb.from('savings').select('*').order('created_at',{ascending:false});
-   if(error){$('status').textContent='Not connected: '+error.message}else{rows=data;$('status').textContent='Connected ✓ (saved online)'}
-  }catch(e){$('status').textContent='Not connected: '+e.message}
- }else{rows=JSON.parse(get('rows')||'[]');$('status').textContent='Not connected yet: entries only on this phone'}
+   if(error){sb=null;$('status').textContent='Not connected: '+error.message}else{rows=data;$('status').textContent='Connected ✓ (saved online)'}
+  }catch(e){sb=null;$('status').textContent='Not connected: '+e.message}
+ }else{rows=JSON.parse(get('rows')||'[]');$('status').textContent='Not connected yet: open Settings'}
  draw()}
 async function addEntry(){
- const was=parseFloat($('wasIn').value),now=parseFloat($('nowIn').value);
- const s=mode==1?parseFloat($('amt').value):was-now;
- if(!(s>0))return alert('Enter a positive saving');
+ let s,was=null,now=null,platform=null;
+ if(kind=='saved'){if(mode==1)s=parseFloat($('amt').value);else{was=parseFloat($('wasIn').value);now=parseFloat($('nowIn').value);s=was-now}}
+ else{s=parseFloat($('soldAmt').value);platform=$('platform').value}
+ if(!(s>0))return alert(kind=='saved'?'Enter a positive saving':'Enter the amount you received');
  const c=$('cur').value;
- const r={created_at:new Date().toISOString(),amount:+s.toFixed(2),currency:c,amount_chf:c=='EUR'?+(s*fx()).toFixed(2):+s.toFixed(2),note:$('note').value||'',was_price:mode==2?was:null,now_price:mode==2?now:null};
- if(sb){const{data,error}=await sb.from('savings').insert(r).select();if(error)return alert(error.message);rows.unshift(data[0])}
+ const r={created_at:new Date().toISOString(),kind,amount:+s.toFixed(2),currency:c,amount_chf:+(c=='EUR'?s*fx():s).toFixed(2),note:$('note').value||'',was_price:was,now_price:now,platform};
+ if(sb){const{data,error}=await sb.from('savings').insert(r).select();
+  if(error)return alert(/kind|platform/.test(error.message)?'Database not upgraded yet: run update.sql in Supabase (manual, Part 5).':error.message);
+  rows.unshift(data[0])}
  else{r.id=Date.now();rows.unshift(r);put('rows',JSON.stringify(rows))}
- $('amt').value=$('wasIn').value=$('nowIn').value=$('note').value='';draw()}
+ ['amt','wasIn','nowIn','soldAmt','note'].forEach(i=>$(i).value='');
+ if(view!='total'&&view!=kind)setView(kind);else draw()}
 async function del(id){if(!confirm('Delete this entry?'))return;
  if(sb){const{error}=await sb.from('savings').delete().eq('id',id);if(error)return alert(error.message)}
  rows=rows.filter(r=>String(r.id)!==String(id));if(!sb)put('rows',JSON.stringify(rows));draw()}
 function draw(){
+ document.documentElement.style.setProperty('--acc','var(--'+view+')');
+ ['total','saved','sold'].forEach(v=>$('v_'+v).className=v==view?'on':'');
+ ['days','months'].forEach(v=>$('sp_'+v).className=v==span?'on':'');
+ const list=view=='total'?rows:rows.filter(r=>K(r)==view);
+ const sv=rows.filter(r=>K(r)=='saved'),so=rows.filter(r=>K(r)=='sold');
  const n=new Date(),day=new Date(n.getFullYear(),n.getMonth(),n.getDate());
  const wk=new Date(day);wk.setDate(day.getDate()-((day.getDay()+6)%7));
- const mo=new Date(n.getFullYear(),n.getMonth(),1);
- const sum=from=>rows.filter(r=>new Date(r.created_at)>=from).reduce((t,r)=>t+ +r.amount_chf,0);
- $('sDay').textContent=f(sum(day));$('sWeek').textContent=f(sum(wk));$('sMonth').textContent=f(sum(mo));$('sAll').textContent=f(sum(new Date(0)));$('tot').textContent='CHF '+f(sum(mo));
- const days=[];for(let i=6;i>=0;i--){const s=new Date(day);s.setDate(day.getDate()-i);const e=new Date(s);e.setDate(s.getDate()+1);
-  days.push([s,rows.filter(r=>{const t=new Date(r.created_at);return t>=s&&t<e}).reduce((t,r)=>t+ +r.amount_chf,0)])}
- const mx=Math.max(1,...days.map(x=>x[1]));
- $('chart').innerHTML=days.map(([s,v])=>`<div style="display:flex;align-items:center;gap:6px"><small style="width:34px">${s.toLocaleDateString('en',{weekday:'short'})}</small><div class="bar" style="width:${v/mx*70}%"></div><small>${f(v)}</small></div>`).join('');
- $('list').innerHTML=rows.slice(0,50).map(r=>`<li onclick="del('${r.id}')"><span>${(r.note||'—').replace(/</g,'&lt;')}<br><small>${new Date(r.created_at).toLocaleString('de-CH')}${r.was_price?` · ${r.was_price} → ${r.now_price}`:''}</small></span><b>${r.currency} ${f(r.amount)}</b></li>`).join('')}
+ const mo=new Date(n.getFullYear(),n.getMonth(),1),yr=new Date(n.getFullYear(),0,1);
+ const sum=(l,a,b)=>l.filter(r=>{const t=new Date(r.created_at);return t>=a&&(!b||t<b)}).reduce((x,r)=>x+V(r),0);
+ $('tot').textContent='CHF '+f(sum(list,mo));$('lbl').textContent=LBL[view];
+ $('split').innerHTML=view=='total'?`<span style="color:var(--saved)">Saved ${f(sum(sv,mo))}</span> &nbsp;+&nbsp; <span style="color:var(--sold)">Sold ${f(sum(so,mo))}</span>`:'';
+ $('sDay').textContent=f(sum(list,day));$('sWeek').textContent=f(sum(list,wk));$('sMonth').textContent=f(sum(list,mo));$('sYear').textContent=f(sum(list,yr));
+ $('sAll').textContent='All time: CHF '+f(sum(list,new Date(0)));
+ const B=[];
+ if(span=='days'){for(let i=6;i>=0;i--){const s=new Date(day);s.setDate(day.getDate()-i);const e=new Date(s);e.setDate(s.getDate()+1);B.push([s.toLocaleDateString('en',{weekday:'short'}),s,e])}}
+ else{for(let i=11;i>=0;i--){B.push([new Date(n.getFullYear(),n.getMonth()-i,1).toLocaleDateString('en',{month:'short'}),new Date(n.getFullYear(),n.getMonth()-i,1),new Date(n.getFullYear(),n.getMonth()-i+1,1)])}}
+ const D=B.map(([l,s,e])=>[l,view=='sold'?0:sum(sv,s,e),view=='saved'?0:sum(so,s,e)]);
+ const mx=Math.max(1,...D.map(d=>d[1]+d[2]));
+ $('chartTitle').textContent=span=='days'?'Last 7 days':'Last 12 months';
+ $('chart').innerHTML=D.map(([l,a,b])=>`<div class="r"><span class="lb">${l}</span><div class="track"><div class="bs" style="width:${a/mx*100}%"></div><div class="bo" style="width:${b/mx*100}%"></div></div><span class="val">${f(a+b)}</span></div>`).join('');
+ $('legend').style.display=view=='total'?'flex':'none';
+ $('list').innerHTML=list.slice(0,50).map(r=>{const k=K(r),x=k=='sold'?(r.platform?' · '+esc(r.platform):''):(r.was_price?` · ${r.was_price} → ${r.now_price}`:'');
+  return `<li onclick="del('${r.id}')"><span><i class="dot" style="background:var(--${k})"></i>${esc(r.note||'—')}<br><small>${new Date(r.created_at).toLocaleString('de-CH',{dateStyle:'short',timeStyle:'short'})}${x}</small></span><b style="color:var(--${k});white-space:nowrap">${r.currency} ${f(r.amount)}</b></li>`}).join('')||'<small>No entries yet</small>'}
 init();
 </script></body></html>
